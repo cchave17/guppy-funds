@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Local MongoDB (optional - comment out if using Atlas)
+  # To use: Set MONGODB_URL=mongodb://admin:admin123@mongodb:27017 in .env
+  mongodb:
+    image: mongo:7.0
+    container_name: guppy-funds-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: guppy_funds
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - guppy-network
+
+  api:
+    build: .
+    container_name: guppy-funds-api
+    ports:
+      - "8000:8000"
+    environment:
+      MONGODB_URL: ${MONGODB_URL}
+      MONGODB_DB_NAME: ${MONGODB_DB_NAME}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    volumes:
+      - ./app:/app/app
+      - ./uploads:/app/uploads
+      - ./.env:/app/.env
+    networks:
+      - guppy-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build: .
+    container_name: guppy-funds-worker
+    environment:
+      MONGODB_URL: ${MONGODB_URL}
+      MONGODB_DB_NAME: ${MONGODB_DB_NAME}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./app:/app/app
+      - ./uploads:/app/uploads
+      - ./.env:/app/.env
+    networks:
+      - guppy-network
+    command: python -u -m app.worker
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+
+networks:
+  guppy-network:
+    driver: bridge
