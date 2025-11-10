@@ -7,9 +7,9 @@ export function useImportStatus(importId: string | null, enabled: boolean = true
     queryKey: ["import-status", importId],
     queryFn: () => apiClient.getImportStatus(importId!),
     enabled: enabled && !!importId,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Stop polling if import is completed or failed
-      if (data?.state === "completed" || data?.state === "failed") {
+      if (query.state.data?.state === "completed" || query.state.data?.state === "failed") {
         return false
       }
       // Poll every 2 seconds while processing
