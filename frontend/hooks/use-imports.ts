@@ -1,6 +1,23 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import apiClient from "@/lib/api"
 import type { SourceBank } from "@/lib/types"
+
+export function useImportStatus(importId: string | null, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ["import-status", importId],
+    queryFn: () => apiClient.getImportStatus(importId!),
+    enabled: enabled && !!importId,
+    refetchInterval: (data) => {
+      // Stop polling if import is completed or failed
+      if (data?.state === "completed" || data?.state === "failed") {
+        return false
+      }
+      // Poll every 2 seconds while processing
+      return 2000
+    },
+    staleTime: 0, // Always fetch fresh data
+  })
+}
 
 export function useUploadCSV() {
   const queryClient = useQueryClient()

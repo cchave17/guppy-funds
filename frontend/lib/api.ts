@@ -196,6 +196,10 @@ class ApiClient {
     return response.json()
   }
 
+  async getImportStatus(importId: string): Promise<Import> {
+    return this.request(`/v1/imports/${importId}`)
+  }
+
   async parseImport(importId: string): Promise<Import> {
     return this.request(`/v1/imports/${importId}/parse`, {
       method: "POST",

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useUploadCSV } from "@/hooks/use-imports"
+import { ImportProgress } from "@/components/import/import-progress"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -12,6 +13,7 @@ import type { SourceBank } from "@/lib/types"
 export default function ImportPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedBank, setSelectedBank] = useState<SourceBank | "">("")
+  const [currentImportId, setCurrentImportId] = useState<string | null>(null)
   const uploadMutation = useUploadCSV()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,11 +35,8 @@ export default function ImportPage() {
       { file: selectedFile, sourceBank: selectedBank as SourceBank },
       {
         onSuccess: (data) => {
-          setSelectedFile(null)
-          setSelectedBank("")
-          // Reset file input
-          const fileInput = document.getElementById("file-upload") as HTMLInputElement
-          if (fileInput) fileInput.value = ""
+          // Set import ID to trigger progress display
+          setCurrentImportId(data.import_id)
         },
       }
     )
@@ -122,25 +121,7 @@ export default function ImportPage() {
             )}
           </Button>
 
-          {/* Status Messages */}
-          {uploadMutation.isSuccess && (
-            <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-              <div>
-                <p className="font-medium text-green-900 dark:text-green-100">
-                  Upload Successful!
-                </p>
-                <p className="text-sm text-green-700 dark:text-green-300">
-                  Import ID: {uploadMutation.data.import_id}
-                </p>
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Your file is being processed in the background. Check the dashboard
-                  for updated transactions.
-                </p>
-              </div>
-            </div>
-          )}
-
+          {/* Error Message */}
           {uploadMutation.isError && (
             <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
               <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
@@ -158,6 +139,22 @@ export default function ImportPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Progress Tracker */}
+      {currentImportId && (
+        <ImportProgress
+          importId={currentImportId}
+          onComplete={() => {
+            // Reset form when import completes
+            setCurrentImportId(null)
+            setSelectedFile(null)
+            setSelectedBank("")
+            // Reset file input
+            const fileInput = document.getElementById("file-upload") as HTMLInputElement
+            if (fileInput) fileInput.value = ""
+          }}
+        />
+      )}
 
       {/* Instructions Card */}
       <Card>
