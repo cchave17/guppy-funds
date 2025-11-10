@@ -15,6 +15,11 @@ class TransactionRaw(BaseModel):
     dedup_key: str  # Unique identifier for duplicate detection
     dedup_method: str  # "reference" for AMEX, "fingerprint" for others
 
+    # Enrichment tracking fields
+    enrichment_attempts: int = 0  # Number of times enrichment was attempted
+    enrichment_error: Optional[str] = None  # Last error message if enrichment failed
+    last_enrichment_attempt: Optional[datetime] = None  # Timestamp of last attempt
+
     class Config:
         json_schema_extra = {
             "example": {

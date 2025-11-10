@@ -101,8 +101,12 @@ export function ImportProgress({ importId, onComplete }: ImportProgressProps) {
             <p className="text-2xl font-bold text-purple-600">{importData.enriched_rows || 0}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Failed</p>
-            <p className="text-2xl font-bold text-red-600">{importData.failed_rows || 0}</p>
+            <p className="text-xs text-muted-foreground">
+              {importData.enrichment_failed_rows ? "Enrich Failed" : "Parse Failed"}
+            </p>
+            <p className="text-2xl font-bold text-red-600">
+              {(importData.enrichment_failed_rows || 0) + (importData.failed_rows || 0)}
+            </p>
           </div>
         </div>
 
@@ -118,13 +122,31 @@ export function ImportProgress({ importId, onComplete }: ImportProgressProps) {
         )}
 
         {isComplete && (
-          <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-            <div className="text-sm text-green-900 dark:text-green-100">
-              <p className="font-medium">Import completed successfully!</p>
-              <p className="mt-1">Your transactions are now available in the dashboard.</p>
-            </div>
-          </div>
+          <>
+            {importData.has_enrichment_errors ? (
+              <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                <div className="text-sm text-yellow-900 dark:text-yellow-100">
+                  <p className="font-medium">Import completed with warnings</p>
+                  <p className="mt-1">
+                    Successfully enriched {importData.enriched_rows} transactions, but{" "}
+                    {importData.enrichment_failed_rows} failed enrichment. You can retry failed transactions later.
+                  </p>
+                  <p className="mt-1 text-xs">
+                    Successfully enriched transactions are available in the dashboard.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                <div className="text-sm text-green-900 dark:text-green-100">
+                  <p className="font-medium">Import completed successfully!</p>
+                  <p className="mt-1">Your transactions are now available in the dashboard.</p>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {isFailed && importData.errors && importData.errors.length > 0 && (

@@ -22,12 +22,15 @@ class ClaudeEnricher:
     async def enrich_import(self) -> dict:
         """
         Enrich all raw transactions for this import.
+        Handles individual transaction failures gracefully - continues processing
+        even if some transactions fail.
 
         Returns:
-            Dictionary with enrichment statistics
+            Dictionary with enrichment statistics including failed transactions
         """
         total_rows = 0
         successful_rows = 0
+        failed_rows = 0
         errors = []
 
         # Find all raw transactions for this import
@@ -36,37 +39,64 @@ class ClaudeEnricher:
         )
 
         async for raw_transaction in cursor:
-            try:
-                total_rows += 1
+            total_rows += 1
+            transaction_id = str(raw_transaction.get("_id"))
 
+            try:
                 # Enrich the transaction
                 enriched = await self._enrich_transaction(raw_transaction)
 
                 # Insert into transactions_enriched
                 await self.db.transactions_enriched.insert_one(enriched.model_dump())
 
-                # Mark raw transaction as processed
+                # Mark raw transaction as processed successfully
                 await self.db.transactions_raw.update_one(
-                    {"_id": raw_transaction["_id"]}, {"$set": {"processed": True}}
+                    {"_id": raw_transaction["_id"]},
+                    {
+                        "$set": {
+                            "processed": True,
+                            "enrichment_attempts": raw_transaction.get("enrichment_attempts", 0) + 1,
+                            "last_enrichment_attempt": datetime.utcnow(),
+                            "enrichment_error": None,  # Clear any previous error
+                        }
+                    },
                 )
 
                 successful_rows += 1
+                print(f"✅ Enriched transaction {total_rows}/{total_rows} (ID: {transaction_id[:8]}...)")
 
             except Exception as e:
-                error_msg = f"Row {raw_transaction.get('_id')}: {str(e)}"
+                # Log the error but CONTINUE processing other transactions
+                failed_rows += 1
+                error_msg = str(e)
+
                 errors.append(
                     {
                         "row_number": total_rows,
-                        "message": str(e),
+                        "transaction_id": transaction_id,
+                        "message": error_msg,
                         "timestamp": datetime.utcnow(),
                     }
                 )
-                print(f"Error enriching transaction: {e}")
+
+                # Update the raw transaction with error details (but don't mark as processed)
+                await self.db.transactions_raw.update_one(
+                    {"_id": raw_transaction["_id"]},
+                    {
+                        "$set": {
+                            "enrichment_attempts": raw_transaction.get("enrichment_attempts", 0) + 1,
+                            "last_enrichment_attempt": datetime.utcnow(),
+                            "enrichment_error": error_msg[:500],  # Truncate long errors
+                        }
+                    },
+                )
+
+                print(f"❌ Failed to enrich transaction {total_rows} (ID: {transaction_id[:8]}...): {error_msg}")
 
         return {
             "total_rows": total_rows,
             "successful_rows": successful_rows,
-            "failed_rows": len(errors),
+            "failed_rows": failed_rows,
             "errors": errors,
         }
 

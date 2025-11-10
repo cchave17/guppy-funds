@@ -84,6 +84,8 @@ export interface Import {
   parsed_rows: number
   enriched_rows: number
   failed_rows: number
+  enrichment_failed_rows?: number  // Transactions that failed during enrichment
+  has_enrichment_errors?: boolean  // True if some transactions failed enrichment
   started_at?: string
   completed_at?: string
   duration_ms?: number
