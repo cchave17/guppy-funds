@@ -31,8 +31,8 @@ export function CategoryChart({ data }: CategoryChartProps) {
           cx="50%"
           cy="50%"
           labelLine={false}
-          label={({ category, percentage }) =>
-            `${category}: ${percentage.toFixed(1)}%`
+          label={(entry: any) =>
+            `${entry.category}: ${entry.percentage.toFixed(1)}%`
           }
           outerRadius={100}
           fill="#8884d8"
