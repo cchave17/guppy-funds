@@ -49,6 +49,18 @@ curl http://localhost:8000/health
 # Should return: {"status":"healthy"}
 ```
 
+5. Access the web interface:
+```
+http://localhost:3000
+```
+
+The frontend provides a modern dashboard for:
+- Viewing transaction history with filtering
+- Monitoring account balances and net worth
+- Analyzing spending by category and merchant
+- Uploading CSV files from supported banks
+- Visualizing financial trends with charts
+
 ### Usage
 
 Upload a CSV file:
@@ -87,15 +99,28 @@ Typically takes 30-60 seconds depending on number of new merchants.
 
 ### Services
 
+**Frontend** (`localhost:3000`)
+- Next.js 14 web interface
+- Modern dashboard with charts and analytics
+- Transaction filtering and search
+- CSV upload wizard
+- Real-time data updates via React Query
+
 **API Service** (`localhost:8000`)
 - FastAPI REST API
-- Handles CSV uploads
-- Manual parse/enrich triggers
+- Handles CSV uploads and queries
+- Transaction, balance, and merchant endpoints
+- Comprehensive filtering and aggregation
 
 **Worker Service**
 - Background job processor
 - Automatically processes uploaded files
 - Polls every 5 seconds for new jobs
+- AI enrichment via Claude API
+
+**MongoDB** (`localhost:27017`)
+- Document database for all data storage
+- Supports local deployment or MongoDB Atlas
 
 ## API Endpoints
 

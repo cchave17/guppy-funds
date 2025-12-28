@@ -1,21 +1,19 @@
-version: '3.8'
-
 services:
-  # Local MongoDB (optional - comment out if using Atlas)
-  # To use: Set MONGODB_URL=mongodb://admin:admin123@mongodb:27017 in .env
-  mongodb:
-    image: mongo:7.0
-    container_name: guppy-funds-mongodb
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin123
-      MONGO_INITDB_DATABASE: guppy_funds
-    volumes:
-      - mongodb_data:/data/db
-    networks:
-      - guppy-network
+  # Local MongoDB (commented out - using MongoDB Atlas)
+  # Uncomment if you want to use local MongoDB instead
+  # mongodb:
+  #   image: mongo:7.0
+  #   container_name: guppy-funds-mongodb
+  #   ports:
+  #     - "27017:27017"
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: admin
+  #     MONGO_INITDB_ROOT_PASSWORD: admin123
+  #     MONGO_INITDB_DATABASE: guppy_funds
+  #   volumes:
+  #     - mongodb_data:/data/db
+  #   networks:
+  #     - guppy-network
 
   api:
     build: .
@@ -49,6 +47,19 @@ services:
     networks:
       - guppy-network
     command: python -u -m app.worker
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: guppy-funds-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    networks:
+      - guppy-network
+    depends_on:
+      - api
     restart: unless-stopped
 
 volumes:

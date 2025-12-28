@@ -188,6 +188,8 @@ class ImportWorker:
     async def _process_enrich(self, job: dict):
         """
         Enrich parsed transactions using Claude API.
+        Handles partial failures gracefully - imports complete successfully
+        even if some individual transactions fail enrichment.
 
         Args:
             job: Import job document
@@ -210,13 +212,18 @@ class ImportWorker:
             end_time = datetime.utcnow()
             duration_ms = int((end_time - start_time).total_seconds() * 1000)
 
-            # Update import with results
+            # Determine if there were enrichment errors
+            has_enrichment_errors = result["failed_rows"] > 0
+
+            # Update import with results - ALWAYS mark as completed (not failed)
             await self.db.imports.update_one(
                 {"import_id": import_id},
                 {
                     "$set": {
                         "state": ImportState.ENRICHED.value,
                         "enriched_rows": result["successful_rows"],
+                        "enrichment_failed_rows": result["failed_rows"],
+                        "has_enrichment_errors": has_enrichment_errors,
                         "completed_at": end_time,
                         "duration_ms": duration_ms,
                         "enrichment_version": 1.0,
@@ -230,10 +237,19 @@ class ImportWorker:
                 {"$set": {"state": ImportState.COMPLETED.value}},
             )
 
-            print(f"✅ Enriched {result['successful_rows']} rows in {duration_ms}ms")
+            # Log results with error info if applicable
+            if has_enrichment_errors:
+                print(
+                    f"⚠️  Enriched {result['successful_rows']}/{result['total_rows']} rows in {duration_ms}ms "
+                    f"({result['failed_rows']} failed - can retry later)"
+                )
+            else:
+                print(f"✅ Enriched {result['successful_rows']}/{result['total_rows']} rows in {duration_ms}ms")
 
         except Exception as e:
-            print(f"❌ Enrich failed for {import_id}: {e}")
+            # Only mark as FAILED if the enrichment process itself crashes
+            # (not individual transaction failures)
+            print(f"❌ Enrichment process crashed for {import_id}: {e}")
             traceback.print_exc()
 
             # Mark as failed
@@ -242,7 +258,7 @@ class ImportWorker:
                 {
                     "$set": {
                         "state": ImportState.FAILED.value,
-                        "notes": f"Enrichment failed: {str(e)}",
+                        "notes": f"Enrichment process crashed: {str(e)}",
                         "completed_at": datetime.utcnow(),
                     }
                 },

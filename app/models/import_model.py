@@ -31,6 +31,7 @@ class Import(BaseModel):
     parsed_rows: int = 0
     enriched_rows: int = 0
     failed_rows: int = 0
+    enrichment_failed_rows: int = 0  # Transactions that failed during enrichment
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     duration_ms: Optional[int] = None
@@ -38,6 +39,7 @@ class Import(BaseModel):
     enrichment_version: Optional[float] = None
     notes: Optional[str] = None
     checksum: Optional[str] = None
+    has_enrichment_errors: bool = False  # True if some transactions failed enrichment
 
     class Config:
         json_schema_extra = {

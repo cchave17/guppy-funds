@@ -390,3 +390,42 @@ async def enrich_import(import_id: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Enrichment failed: {str(e)}",
         )
+
+
+@router.get(
+    "/{import_id}",
+    response_model=dict,
+    summary="Get import status",
+    description="""
+    Get the current status of an import job.
+
+    **States:**
+    - `uploaded` - File uploaded, waiting for processing
+    - `parsing` - Currently parsing CSV
+    - `parsed` - CSV parsed, ready for enrichment
+    - `enriching` - AI enrichment in progress
+    - `enriched` - Enrichment complete
+    - `completed` - All processing finished
+    - `failed` - Processing failed (check errors)
+
+    **Progress:**
+    - Shows total_rows, parsed_rows, enriched_rows, failed_rows
+    - Duration and timestamps
+    """,
+)
+async def get_import_status(import_id: str):
+    """Get the status of an import job."""
+    db = await get_database()
+
+    import_doc = await db.imports.find_one({"import_id": import_id})
+
+    if not import_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Import {import_id} not found",
+        )
+
+    # Convert ObjectId to string for JSON serialization
+    import_doc["_id"] = str(import_doc["_id"])
+
+    return import_doc
